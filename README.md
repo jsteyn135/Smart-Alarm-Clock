@@ -17,5 +17,6 @@
 ### LiquidCrystal (for lcd) library (should already be installed)
 #### https://www.arduino.cc/reference/en/libraries/liquidcrystal/ 
 #### how to connect LCD:
+#### https://docs.arduino.cc/learn/electronics/lcd-displays lists the parts
 #### ![alt text](https://github.com/jsteyn135/Smart-Alarm-Clock/blob/30fca93536255daa57ff5a93cc77974508efa352/imgs/LCD_Base_bb_Fritz.png)
 ### ---------------------------------------------------
