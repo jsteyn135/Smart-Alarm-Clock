@@ -35,12 +35,12 @@ byte Bell[] = {
 };
 
 void setup() {
- Serial.begin(9600);
+  Serial.begin(9600);
   analogValuesSize = sizeof(analogValues)/sizeof(int); 
   
   lcd.begin(16,2);//width and height of the lcd
-  rt.start(2022,11,23,12,30,9);// this sets the rtc time to 2022/11/23 12:30:09 -> year/month/day hours/minutes/seconds
-  
+  rt.start(2022,4,16,1,45,1);// this sets the rtc time to 2022/11/23 12:30:09 -> year/month/day hours/minutes/seconds
+  pinMode(10,OUTPUT);// for the buzzer
 }
 
 void rotateRow(int row){
@@ -58,12 +58,37 @@ void rotateRow(int row){
   lcd.print("                ");
   
 } 
-
+int test = 1;
 //Data should hold the value of the user input alarm
 void loop() {
+  
+  if(test==1){
+    test=0;
+    rt.setAlarmTime(0,5);// alarm and led will go off in 5 mins
+  }
+  
+  if(rt.alarmSet ==1){// if the alarm is set, then check if its time to make the alarm go off
+    rt.checkAlarm();  
+  }
+
+  if(rt.alarmSound == 1){//if it is alarm time, then make sound
+    rt.soundAlarmOn();// this will also turn on the LED light because of the way it is wired
+    
+  }
+
+  
+  
   int value = analogRead(analogPin);
   char currentKeyHit = analogKeyPress(value);
+
+
+  /*
+  if(hit some button or input to make the alarm turn off){
+    rt.alarmSound = 0;// this will turn off the alarm
+    
   
+  }
+  */  
   lcd.setCursor(0,0);
   lcd.print("ALARM:");
   delay(200);   
@@ -75,6 +100,15 @@ void loop() {
       data_count++; 
     
    }
+
+   /*
+    if(hit some button or input to set the alarm){
+      //determine hours/mins
+      int hrs;
+      int mins;
+      rt.setAlarmTime(hrs,mins);
+    }
+    */
    
 
 }
