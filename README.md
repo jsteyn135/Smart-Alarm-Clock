@@ -42,4 +42,7 @@
 
 #### ![img1](imgs/multiplexConfigRaw.png)
 
+#### buzzer/led for alarm( using another breadboard connected to the original breadboard)
+#### ![img1](imgs/IMG_0602.jpg)
+
 ### ---------------------------------------------------
