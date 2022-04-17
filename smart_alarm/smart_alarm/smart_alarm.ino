@@ -4,17 +4,19 @@
 
 #include <LiquidCrystal.h>
 #include "real_time.h"
+#include <DHT.h>// look for the one in the library mananger by adafruit
+#include <avr/interrupt.h>
+
 #define Password_Length 5
+#define DHTPIN 8
+#define DHTTYPE DHT11
 
 char Data[Password_Length]; 
-
 byte data_count = 0, master_count = 0;
-
-
+DHT dht(DHTPIN, DHTTYPE);
 real_time rt;//real time clock
 
 // each number here refers to the pins
-
 LiquidCrystal lcd(12,11,5,4,3,2);// lcd
 
 const int analogPin = A0; 
@@ -35,13 +37,20 @@ byte Bell[] = {
 };
 
 void setup() {
+  pinMode(7,INPUT_PULLUP);// for button to turn off alarm
   Serial.begin(9600);
   analogValuesSize = sizeof(analogValues)/sizeof(int); 
   
   lcd.begin(16,2);//width and height of the lcd
   rt.start(2022,4,16,1,45,1);// this sets the rtc time to 2022/11/23 12:30:09 -> year/month/day hours/minutes/seconds
   pinMode(10,OUTPUT);// for the buzzer
+  
+  dht.begin(); //for the temperature and humidity sensor
+  delay(100);
+
+  
 }
+
 
 void rotateRow(int row){
 
@@ -62,9 +71,19 @@ int test = 1;
 //Data should hold the value of the user input alarm
 void loop() {
   
-  if(test==1){
+  float humidity = dht.readHumidity();// use this to get the humidity and temp, they may sometimes be nan
+  delay(300);
+  float temperature = dht.readTemperature();
+  
+  //pin 7 is the button used to turn off the alarm sound and LED
+  if(digitalRead(7) == LOW){// if it is LOW its being pushed
+    rt.alarmSound = 0;// this will turn off the buzzer and the light
+  }
+  
+   
+  if(test==1){// just some testing code
     test=0;
-    rt.setAlarmTime(0,5);// alarm and led will go off in 5 mins
+    rt.setAlarmTime(0,1);// alarm and led will go off in 1 mins and 0 hours
   }
   
   if(rt.alarmSet ==1){// if the alarm is set, then check if its time to make the alarm go off
@@ -81,18 +100,12 @@ void loop() {
   int value = analogRead(analogPin);
   char currentKeyHit = analogKeyPress(value);
 
-
-  /*
-  if(hit some button or input to make the alarm turn off){
-    rt.alarmSound = 0;// this will turn off the alarm
-    
   
-  }
-  */  
   lcd.setCursor(0,0);
   lcd.print("ALARM:");
-  delay(200);   
- 
+  delay(200);
+     
+  
   if (value<1000 && currentKeyHit ){
       Data[data_count] = currentKeyHit;
       lcd.setCursor(data_count+6,0); 
@@ -100,7 +113,8 @@ void loop() {
       data_count++; 
     
    }
-
+   
+   
    /*
     if(hit some button or input to set the alarm){
       //determine hours/mins
