@@ -7,11 +7,12 @@
 #include <DHT.h>// look for the one in the library mananger by adafruit
 #include <avr/interrupt.h>
 
-#define Password_Length 5
+
+#define input_Length 5
 #define DHTPIN 8
 #define DHTTYPE DHT11
 
-char Data[Password_Length]; 
+char Data[input_Length]; 
 byte data_count = 0, master_count = 0;
 DHT dht(DHTPIN, DHTTYPE);
 real_time rt;//real time clock
@@ -24,7 +25,9 @@ int analogValues[] = {59,108,162,183,587,597,609,614,631,640,649,653,668,674,682
 
 char keypadButton[] = "123A456B789C*0#D";           
 int analogValuesSize;
+int alarmButton = 1;
 
+//lets use the bell icon to indicate the alarm has been set
 byte Bell[] = {
   B00100,
   B01110,
@@ -36,8 +39,11 @@ byte Bell[] = {
   B00000
 };
 
+int hourKey1, hourKey2, minKey1, minKey2;
+
 void setup() {
   pinMode(7,INPUT_PULLUP);// for button to turn off alarm
+  pinMode(9,INPUT_PULLUP);// for button to set up alarm
   Serial.begin(9600);
   analogValuesSize = sizeof(analogValues)/sizeof(int); 
   
@@ -52,21 +58,6 @@ void setup() {
 }
 
 
-void rotateRow(int row){
-
-  lcd.createChar(0, Bell);
-  delay(1000);
-  lcd.setCursor(0,row); 
-  lcd.print("                ");
-  lcd.setCursor(0,row);
-  lcd.print("HOLD # TO SET");
-  lcd.setCursor(14,0);
-  lcd.write(byte(0));
-  delay(1000);
-  lcd.setCursor(0,row); 
-  lcd.print("                ");
-  
-} 
 int test = 1;
 //Data should hold the value of the user input alarm
 void loop() {
@@ -79,13 +70,8 @@ void loop() {
   if(digitalRead(7) == LOW){// if it is LOW its being pushed
     rt.alarmSound = 0;// this will turn off the buzzer and the light
   }
-  
-   
-  if(test==1){// just some testing code
-    test=0;
-    rt.setAlarmTime(0,1);// alarm and led will go off in 1 mins and 0 hours
-  }
-  
+
+
   if(rt.alarmSet ==1){// if the alarm is set, then check if its time to make the alarm go off
     rt.checkAlarm();  
   }
@@ -94,47 +80,95 @@ void loop() {
     rt.soundAlarmOn();// this will also turn on the LED light because of the way it is wired
     
   }
-
-  
   
   int value = analogRead(analogPin);
   char currentKeyHit = analogKeyPress(value);
 
+  // first greeting page
+  if(test==1){
+    lcd.setCursor(0,0);
+    lcd.print("ALARM:");
+    lcd.setCursor(0, 1);
+  }
+  //screen after the alarm has been set
+  if(test==0){
+   defaultScreen();
+  }
   
-  lcd.setCursor(0,0);
-  lcd.print("ALARM:");
   delay(200);
      
   
   if (value<1000 && currentKeyHit ){
-      Data[data_count] = currentKeyHit;
-      lcd.setCursor(data_count+6,0); 
-      lcd.print(Data[data_count]); 
-      data_count++; 
-    
-   }
-   
-   
-   /*
-    if(hit some button or input to set the alarm){
-      //determine hours/mins
-      int hrs;
-      int mins;
-      rt.setAlarmTime(hrs,mins);
+    // when the we reach third array elemnt skip the :
+    if(data_count == 2){
+        lcd.setCursor(data_count+7,0);
+        Data[data_count] = ':';
+        data_count ++;
     }
-    */
+    //else prints the array on lcd and convets the key hit to integer
+    if(data_count > 2 || data_count < 2 || data_count < input_Length){
+      
+      Data[data_count] = currentKeyHit;
+      lcd.setCursor(8,0);
+      lcd.print(":");
+      lcd.setCursor(data_count+6,0); 
+      lcd.print(Data[data_count]);
+      
+      switch (data_count) {
+        case 0:
+          hourKey1 =  currentKeyHit - '0';
+          
+        case 1:
+          hourKey2 = currentKeyHit - '0';
+
+        case 3:
+          minKey1 = currentKeyHit - '0';
+
+        case 4:
+          minKey2 = currentKeyHit - '0';
+      }
+      data_count+=1;
+     }
+     
+     if (data_count == 5){
+       lcd.setCursor(0,1); 
+       lcd.print("*.Ok");
+     }
+
+   }
+    if(currentKeyHit == '*'){
+        setAlarm();
+    }
    
 
 }
+//set the actual alarm
+void setAlarm(){
+ int hrs = (hourKey1*10)+ hourKey2;
+ int mins = ( minKey1*10)+ minKey2;
+ if(test==1){
+    test=0;
+    rt.setAlarmTime(hrs,mins);
+    clearRow(0);
+    clearRow(1);
+   
+ }
+ 
+  
+}
+//show the default screen with date once alam is set with bell to indicate that the alarm has been set
 void defaultScreen(){
+  lcd.createChar(0, Bell);
   lcd.setCursor(0,0);
   lcd.print(rt.rtc.now().year());
   lcd.setCursor(5,0);
+  lcd.print(":");
+  lcd.setCursor(6,0);
   lcd.print(rt.rtc.now().month());
   lcd.setCursor(8,0);
+  lcd.print(":");
+  lcd.setCursor(9,0);
   lcd.print(rt.rtc.now().day());
-  lcd.setCursor(0,0);
-  lcd.print("HOLD # TO SET");
   lcd.setCursor(14,0);
   lcd.write(byte(0));
   lcd.setCursor(0,1);
@@ -148,16 +182,17 @@ void defaultScreen(){
   lcd.print(":");
   lcd.setCursor(6,1);
   lcd.print(rt.rtc.now().second());
-  rotateRow(0);
+  
 }
 
 void clearRow(int row){
   
-  lcd.setCursor(0,0);
-  lcd.print("               ");
+  lcd.setCursor(0,row);
+  lcd.print("                   ");
   
 }
 
+//analog pin valaue read to get current 
 int debounce(int last){
   
   delay(10);                                             
@@ -172,13 +207,14 @@ int debounce(int last){
   return current;                                       
 }
 
+//converting to char to conver the current value to the equivalent key
 char analogKeyPress(int value){
   
   value = debounce(value);  
                               
   for (int i = 0; i < analogValuesSize; i++){           
     if (abs(value - analogValues[i]) < 5){
-      //Serial.println(keypadButton[i]);
+     
       return keypadButton[i];
 
       while(analogRead(analogPin) < 1000){delay(100);}  
