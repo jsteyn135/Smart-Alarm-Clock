@@ -21,8 +21,8 @@ real_time rt;//real time clock
 LiquidCrystal lcd(12,11,5,4,3,2);// lcd
 
 const int analogPin = A0; 
-int analogValues[] = {59,108,162,183,587,597,609,614,631,640,649,653,668,674,682,686};
-
+//int analogValues[] = {59,108,162,183,587,597,609,614,631,640,649,653,668,674,682,686};// Ridhisha analog values,
+int analogValues[] = {8,74,132,184,222,263,301,335,361,389,416,440,458,478,498,516}; // Jacques analog values, pls dont delete just comment out
 char keypadButton[] = "123A456B789C*0#D";           
 int analogValuesSize;
 int alarmButton = 1;
@@ -43,16 +43,19 @@ int hourKey1, hourKey2, minKey1, minKey2;
 
 void setup() {
   pinMode(7,INPUT_PULLUP);// for button to turn off alarm
-  pinMode(9,INPUT_PULLUP);// for button to set up alarm
+  pinMode(9,INPUT_PULLUP);// for button to snooze
+  pinMode(A1,OUTPUT);// for led light that turns on when alarm is set
   Serial.begin(9600);
   analogValuesSize = sizeof(analogValues)/sizeof(int); 
   
   lcd.begin(16,2);//width and height of the lcd
-  rt.start(2022,4,16,1,45,1);// this sets the rtc time to 2022/11/23 12:30:09 -> year/month/day hours/minutes/seconds
+  //rt.start(2022,5,2,5,30,0);// this sets the rtc time to 2022/11/23 12:30:09 -> year/month/day hours/minutes/seconds
+  rt.start(2022,5,2,5,45,1);
   pinMode(10,OUTPUT);// for the buzzer
   
   dht.begin(); //for the temperature and humidity sensor
   delay(100);
+  digitalWrite(A1,LOW);
 
   
 }
@@ -67,8 +70,32 @@ void loop() {
   float temperature = dht.readTemperature();
   
   //pin 7 is the button used to turn off the alarm sound and LED
+
+
+  if(digitalRead(9)== LOW){// if the snooze button is pressed
+    if(rt.alarmSet == 0 && rt.alarmSound == 1){
+      rt.alarmSet = 1;
+      rt.alarmSound = 0;
+      rt.snoozeButton(15,0);// snooze for 15 second
+      digitalWrite(A1,HIGH);
+    }
+    else{
+      if(rt.alarmSet == 1 && rt.alarmSound == 0){
+        rt.snoozeButton(15,1);// snooze for 15 second
+        digitalWrite(A1,HIGH);
+      }
+    }
+    
+  }// end if snooze
   if(digitalRead(7) == LOW){// if it is LOW its being pushed
     rt.alarmSound = 0;// this will turn off the buzzer and the light
+    if(rt.alarmSet == 1){
+      
+    }
+    else{
+      digitalWrite(A1,LOW);  
+    }
+    
   }
 
 
@@ -92,6 +119,8 @@ void loop() {
   }
   //screen after the alarm has been set
   if(test==0){
+   delay(100);
+   lcd.clear();
    defaultScreen();
   }
   
@@ -138,26 +167,25 @@ void loop() {
    }
     if(currentKeyHit == '*'){
         setAlarm();
+        
     }
    
-
-}
+}// end of loop
 //set the actual alarm
 void setAlarm(){
- int hrs = (hourKey1*10)+ hourKey2;
- int mins = ( minKey1*10)+ minKey2;
+ int hrs = (hourKey1*10)+ hourKey2;// you cannot set the time above 9hrs 99 mins or else the alarm goes off instantly(bug)
+ int mins = ( minKey1*10)+ minKey2;// dont waste time trying to figure out why, I already spent hours looking
  if(test==1){
     test=0;
     rt.setAlarmTime(hrs,mins);
-    clearRow(0);
-    clearRow(1);
-   
+    digitalWrite(A1,HIGH);// turns on the led indicating the alarm is set
  }
  
-  
-}
+ 
+}// end set alarm
 //show the default screen with date once alam is set with bell to indicate that the alarm has been set
 void defaultScreen(){
+  lcd.clear();
   lcd.createChar(0, Bell);
   lcd.setCursor(0,0);
   lcd.print(rt.rtc.now().year());
