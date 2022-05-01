@@ -12,22 +12,29 @@
 #define DHTPIN 8
 #define DHTTYPE DHT11
 
+//display variables for keypad
 char Data[input_Length]; 
 byte data_count = 0, master_count = 0;
+
+//temp and humidity declaration ?
 DHT dht(DHTPIN, DHTTYPE);
-real_time rt;//real time clock
+
+//real time clock
+real_time rt;
 
 // each number here refers to the pins
 LiquidCrystal lcd(12,11,5,4,3,2);// lcd
 
+//keypad variables
 const int analogPin = A0; 
-//int analogValues[] = {59,108,162,183,587,597,609,614,631,640,649,653,668,674,682,686};// Ridhisha analog values,
-int analogValues[] = {8,74,132,184,222,263,301,335,361,389,416,440,458,478,498,516}; // Jacques analog values, pls dont delete just comment out
+int analogValues[] = {59,108,162,183,587,597,609,614,631,640,649,653,668,674,682,686};// Ridhisha analog values,
+//int analogValues[] = {8,74,132,184,222,263,301,335,361,389,416,440,458,478,498,516}; // Jacques analog values, pls dont delete just comment out
 char keypadButton[] = "123A456B789C*0#D";           
 int analogValuesSize;
 int alarmButton = 1;
+int hourKey1, hourKey2, minKey1, minKey2;
 
-//lets use the bell icon to indicate the alarm has been set
+// bell icon to indicate the alarm has been set
 byte Bell[] = {
   B00100,
   B01110,
@@ -39,21 +46,52 @@ byte Bell[] = {
   B00000
 };
 
-int hourKey1, hourKey2, minKey1, minKey2;
+//icon for thermometer
+byte Thermometer[8] = 
+{
+    B00100,
+    B01010,
+    B01010,
+    B01110,
+    B01110,
+    B11111,
+    B11111,
+    B01110
+};
+
+//icon for water droplet
+byte Water[8] = 
+{
+    B00100,
+    B00100,
+    B01010,
+    B01010,
+    B10001,
+    B10001,
+    B10001,
+    B01110,
+};
+
+
 
 void setup() {
   pinMode(7,INPUT_PULLUP);// for button to turn off alarm
   pinMode(9,INPUT_PULLUP);// for button to snooze
   pinMode(A1,OUTPUT);// for led light that turns on when alarm is set
-  Serial.begin(9600);
-  analogValuesSize = sizeof(analogValues)/sizeof(int); 
   
-  lcd.begin(16,2);//width and height of the lcd
-  //rt.start(2022,5,2,5,30,0);// this sets the rtc time to 2022/11/23 12:30:09 -> year/month/day hours/minutes/seconds
+  Serial.begin(9600);
+  
+  analogValuesSize = sizeof(analogValues)/sizeof(int); 
+
+  //width and height of the lcd
+  lcd.begin(16,2);
+  
+  // for the buzzer, this sets the rtc time to 2022/05/02 05:45:01 -> year/month/day hours/minutes/seconds
   rt.start(2022,5,2,5,45,1);
   pinMode(10,OUTPUT);// for the buzzer
   
-  dht.begin(); //for the temperature and humidity sensor
+   //for the temperature and humidity sensor
+  dht.begin();
   delay(100);
   digitalWrite(A1,LOW);
 
@@ -62,12 +100,14 @@ void setup() {
 
 
 int test = 1;
-//Data should hold the value of the user input alarm
+
 void loop() {
   
   float humidity = dht.readHumidity();// use this to get the humidity and temp, they may sometimes be nan
+  //Serial.println(humidity);
   delay(300);
   float temperature = dht.readTemperature();
+  //Serial.println(temperature);
   
   //pin 7 is the button used to turn off the alarm sound and LED
 
@@ -121,14 +161,15 @@ void loop() {
   if(test==0){
    delay(100);
    lcd.clear();
-   defaultScreen();
+   defaultScreen(humidity,temperature);
   }
   
   delay(200);
      
   
   if (value<1000 && currentKeyHit ){
-    // when the we reach third array elemnt skip the :
+   
+    // when the we reach third array element skip the :
     if(data_count == 2){
         lcd.setCursor(data_count+7,0);
         Data[data_count] = ':';
@@ -162,16 +203,22 @@ void loop() {
      if (data_count == 5){
        lcd.setCursor(0,1); 
        lcd.print("*.Ok");
+       lcd.print("#.Cancel");
      }
+    
 
    }
     if(currentKeyHit == '*'){
         setAlarm();
         
     }
+    if(currentKeyHit == '#'){
+        clearInput();
+        
+    }
    
 }// end of loop
-//set the actual alarm
+//                                                                                                                                                                                               set the actual alarm
 void setAlarm(){
  int hrs = (hourKey1*10)+ hourKey2;// you cannot set the time above 9hrs 99 mins or else the alarm goes off instantly(bug)
  int mins = ( minKey1*10)+ minKey2;// dont waste time trying to figure out why, I already spent hours looking
@@ -183,8 +230,19 @@ void setAlarm(){
  
  
 }// end set alarm
+
+
+void clearInput(){
+  memset(Data, 0, sizeof(Data));
+  data_count = 0;
+  lcd.setCursor(0,0);
+  clearRow(0);
+  clearRow(1);
+}
+
+
 //show the default screen with date once alam is set with bell to indicate that the alarm has been set
-void defaultScreen(){
+void defaultScreen(float humidity, float temperature){
   lcd.clear();
   lcd.createChar(0, Bell);
   lcd.setCursor(0,0);
@@ -195,7 +253,7 @@ void defaultScreen(){
   lcd.print(rt.rtc.now().month());
   lcd.setCursor(8,0);
   lcd.print(":");
-  lcd.setCursor(9,0);
+  lcd.setCursor(9,0);          
   lcd.print(rt.rtc.now().day());
   lcd.setCursor(14,0);
   lcd.write(byte(0));
@@ -210,8 +268,34 @@ void defaultScreen(){
   lcd.print(":");
   lcd.setCursor(6,1);
   lcd.print(rt.rtc.now().second());
-  
+  rotateRow(0, humidity,temperature);
 }
+
+void rotateRow(int row, float humidity, float temperature){
+
+  lcd.createChar(1, Thermometer);
+  lcd.createChar(2, Water);
+  delay(1000);
+  
+  lcd.setCursor(0,row); 
+  lcd.print("                ");
+ 
+  lcd.setCursor(0,row);
+  lcd.write(byte(1));
+  lcd.print(':');
+  lcd.setCursor(2,row);
+  lcd.print(temperature);
+  
+  lcd.setCursor(8,row);
+  lcd.write(byte(2));
+  lcd.print(':');
+  lcd.setCursor(10,row);
+  lcd.print(humidity);
+  delay(1000);
+  
+  
+} 
+
 
 void clearRow(int row){
   
@@ -242,7 +326,7 @@ char analogKeyPress(int value){
                               
   for (int i = 0; i < analogValuesSize; i++){           
     if (abs(value - analogValues[i]) < 5){
-     
+      Serial.println(keypadButton[i]);
       return keypadButton[i];
 
       while(analogRead(analogPin) < 1000){delay(100);}  
