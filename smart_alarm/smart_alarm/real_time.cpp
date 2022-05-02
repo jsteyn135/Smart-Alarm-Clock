@@ -46,7 +46,7 @@ void real_time::setAlarmTime(int hrs,int mins){
 
 
 void real_time::soundAlarmOn(){// turn on the buzzer alarm
-  tone(10,NOTE_E3,147);//pin 10, note_e3, 147 miliseconds
+  tone(10,NOTE_E3,500);//pin 10, note_e3, 147 miliseconds
   alarmSet = 0;
 }//end sound alarm on
 

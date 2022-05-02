@@ -27,8 +27,8 @@ LiquidCrystal lcd(12,11,5,4,3,2);// lcd
 
 //keypad variables
 const int analogPin = A0; 
-int analogValues[] = {59,108,162,183,587,597,609,614,631,640,649,653,668,674,682,686};// Ridhisha analog values,
-//int analogValues[] = {8,74,132,184,222,263,301,335,361,389,416,440,458,478,498,516}; // Jacques analog values, pls dont delete just comment out
+//int analogValues[] = {59,108,162,183,587,597,609,614,631,640,649,653,668,674,682,686};// Ridhisha analog values,
+int analogValues[] = {8,74,132,184,222,263,301,335,361,389,416,440,458,478,498,516}; // Jacques analog values, pls dont delete just comment out
 char keypadButton[] = "123A456B789C*0#D";           
 int analogValuesSize;
 int alarmButton = 1;
